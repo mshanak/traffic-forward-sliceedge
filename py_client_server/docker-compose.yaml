@@ -1,0 +1,39 @@
+services:
+  server:
+    build: ./server
+    container_name: pfw_server
+    networks:
+      pfw:
+        ipv4_address: 172.28.0.2
+
+  port_forwarder:
+    build: ../traffic_forwarder_service # C++ forwarder
+    container_name: pfw_forwarder
+    environment:
+      BIND_IP: "0.0.0.0"
+      MAPPINGS: "udp:5000=172.28.0.2:9000" # <-- UDP forwarder mapping
+    depends_on:
+      - server
+    networks:
+      pfw:
+        ipv4_address: 172.28.0.3
+
+  client:
+    build: ./client
+    container_name: pfw_client
+    environment:
+      FORWARDER_HOST: "port_forwarder"
+      FORWARDER_PORT: "5000"
+      MESSAGE: "hello via UDP forwarder -> server\n"
+    depends_on:
+      - port_forwarder
+    networks:
+      pfw:
+        ipv4_address: 172.28.0.4
+
+networks:
+  pfw:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
